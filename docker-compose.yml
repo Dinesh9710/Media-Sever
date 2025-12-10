@@ -1,0 +1,78 @@
+version: "3.7"
+services:
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    environment:
+      # Set your User ID (PUID) and Group ID (PGID) to match your host system
+      # This is CRITICAL for file permissions! Use 'id -u' and 'id -g' in your terminal to find these values.
+      - PUID=0
+      - PGID=0
+      - TZ=Asia/Kuala_Lumpur # Change this to your local timezone
+    volumes:
+      # Configuration (settings, torrent files)
+      - ~/docker/transmission/config:/config
+      # Downloads/Incomplete Files
+      - ~/docker/jellyfin/media/downloads:/downloads
+      # Completed Files (where the files end up)
+      # Transmission will put the completed files here.
+      - ~/docker/jellyfin/media/completed:/watch
+    ports:
+      - 9091:9091 # Web UI for Transmission (http://<your-ip>:9091)
+      - 51413:51413 # Default Transmission P2P port (TCP)
+      - 51413:51413/udp # Default Transmission P2P port (UDP)
+    restart: unless-stopped
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=0 # Must match PUID from Transmission!
+      - PGID=0 # Must match PGID from Transmission!
+      - TZ=Asia/Kuala_Lumpur # Change this to your local timezone
+    volumes:
+      # Configuration and Database
+      - ~/docker/jellyfin/config:/config
+      # Cache for metadata, thumbnails, and temporary transcodes
+      - ~/docker/jellyfin/cache:/cache
+      # The main media library
+      # This is the directory Jellyfin will scan to find your completed movies/shows.
+      - ~/docker/jellyfin/media:/data
+    ports:
+      - 8096:8096 # Web UI for Jellyfin (http://<your-ip>:8096)
+      - 8920:8920 # For HTTPS (if you set it up later)
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=0 # Your Root User ID
+      - PGID=0 # Your Root Group ID
+      - TZ=Asia/Kuala_Lumpur # Ensure this matches your timezone
+    volumes:
+      - ~/docker/radarr/config:/config
+      # Volume for completed files to be imported from (Transmission completed path)
+      - ~/docker/jellyfin/media/completed:/data/completed
+      # Volume for the final destination of imported Movies
+      - ~/docker/jellyfin/media/Movies:/data/Movies
+    ports:
+      - 7878:7878 # Web UI for Radarr (http://192.168.0.4:7878)
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=0 # Your Root User ID
+      - PGID=0 # Your Root Group ID
+      - TZ=Asia/Kuala_Lumpur # Ensure this matches your timezone
+    volumes:
+      - ~/docker/sonarr/config:/config
+      # Volume for completed files to be imported from (Transmission completed path)
+      - ~/docker/jellyfin/media/completed:/data/completed
+      # Volume for the final destination of imported TV Shows
+      - ~/docker/jellyfin/media/Shows:/data/Shows
+    ports:
+      - 8989:8989 # Web UI for Sonarr (http://192.168.0.4:8989)
+    restart: unless-stopped
