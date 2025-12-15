@@ -47,13 +47,14 @@ services:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
     environment:
-      - PUID=0 # Your Root User ID
-      - PGID=0 # Your Root Group ID
+      - PUID=1000 # Your Root User ID
+      - PGID=1000 # Your Root Group ID
       - TZ=Asia/Kuala_Lumpur # Ensure this matches your timezone
     volumes:
       - ~/docker/radarr/config:/config
       # Volume for completed files to be imported from (Transmission completed path)
       - ~/docker/jellyfin/media/completed:/data/completed
+      - ~/docker/jellyfin/media/completed:/watch
       # Volume for the final destination of imported Movies
       - ~/docker/jellyfin/media/Movies:/data/Movies
     ports:
@@ -64,8 +65,8 @@ services:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     environment:
-      - PUID=0 # Your Root User ID
-      - PGID=0 # Your Root Group ID
+      - PUID=1000 # Your Root User ID
+      - PGID=1000 # Your Root Group ID
       - TZ=Asia/Kuala_Lumpur # Ensure this matches your timezone
     volumes:
       - ~/docker/sonarr/config:/config
@@ -75,4 +76,30 @@ services:
       - ~/docker/jellyfin/media/Shows:/data/Shows
     ports:
       - 8989:8989 # Web UI for Sonarr (http://192.168.0.4:8989)
+    restart: unless-stopped
+
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Kuala_Lumpur # <-- CRITICAL: Change this to your actual timezone!
+      - AUTO_UPDATE=true
+    volumes:
+      - ~/docker/jackett/config:/config
+      # Jackett needs to see the media volume to correctly hand off the file path
+      - ~/docker/jellyfin/media:/data
+    ports:
+      - 9117:9117 # Web UI for Jackett (http://192.168.0.4:9117)
+    restart: unless-stopped
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Asia/Kuala_Lumpur # <-- Ensure this matches your timezone
+    ports:
+      - 8191:8191 # Web UI for FlareSolverr (http://192.168.0.4:8191)
     restart: unless-stopped
